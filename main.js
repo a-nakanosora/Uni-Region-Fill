@@ -139,7 +139,13 @@ function main(){
             _filechange_Fill(file){
                 loadImageFile(file, e=>{
                     const {name, img} = e
-                    this.$refs.maincanvas.getContext('2d').drawImage(img,0,0)
+
+                    const cnv = this.$refs.maincanvas
+                    const ctx = cnv.getContext('2d')
+                    clearCanvas(cnv, 'rgba(255,255,255,1.0)')
+                    ctx.drawImage(img,0,0)
+                    State.tempcnv.getContext('2d').drawImage(cnv,0,0)
+                    State.urs.forget() /// temp
                 })
             },
 
@@ -181,11 +187,10 @@ function main(){
 
                     if(false)
                         /// use alpha
-                        ctx.clearRect(0,0,W,H)
+                        clearCanvas(cnv)
                     else {
                         /// non-alpha
-                        ctx.fillStyle = 'rgba(255,255,255,1.0)'
-                        ctx.fillRect(0,0,W,H)
+                        clearCanvas(cnv, 'rgba(255,255,255,1.0)')
                     }
 
                     ///
@@ -244,6 +249,8 @@ function main(){
                         ct.translate(center.sub(new Vector(W/2, H/2)))
                         ct.update()
                     }()
+
+                    State.urs.forget()
 
                     this.canvasInitializing = false
                 })
@@ -528,6 +535,16 @@ function loadImageFile(file, callback){
         callback({name:file.name, img})
     }
     img.src = URL.createObjectURL(file)
+}
+
+function clearCanvas(cnv, fillStyle=null){
+    const ctx = cnv.getContext('2d')
+    if(fillStyle) {
+        ctx.fillStyle = fillStyle
+        ctx.fillRect(0,0,cnv.width,cnv.height)
+    } else {
+        ctx.clearRect(0,0,cnv.width,cnv.height)
+    }
 }
 
 function startdrag(onMove=null, onUp=null, throttleInterval=5){
