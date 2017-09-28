@@ -123,22 +123,30 @@ body {
     border-radius: 5px;
 }
 
-.initializing {
+#initializing {
     margin:auto;
     color: #909090;
 
+    position: fixed;
+    left: 0;
+    top: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100%;
     width: 100%;
 }
+#browserwarning {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+}
 </style>
 </head>
 
 <body>
 
-<div class="initializing"><div>initializing...</div></div>
+<div id="initializing"><div>initializing...</div></div>
 
 <div id="vue-root" class="hide">
     <div class="opts-a"
@@ -349,6 +357,17 @@ Vue.component('uni-pin', {
 </script>
 
 
+
+<div id="browserwarning"></div>
+<script>
+void function(){
+    const bw = document.getElementById('browserwarning')
+    if(!window.chrome)
+        bw.innerText = '<!> Supported browser is only Chrome v61 or later'
+    else
+        bw.remove()
+}()
+</script>
 
 <script type="module" src="./main.js"></script>
 

@@ -401,7 +401,7 @@ function main(){
             ///
             this.appinited = true
             this.$el.className=""
-            const ini =  document.querySelector('.initializing')
+            const ini =  document.querySelector('#initializing')
             ini.parentNode.removeChild(ini)
 
 
