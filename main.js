@@ -406,8 +406,14 @@ function main(){
 
 
             /// localStorage
-            const los = JSON.parse(localStorage.uni || '{}')
-            this.showHelp = !!los.showHelp
+            if(localStorage.uni) {
+                try{
+                    const los = JSON.parse(localStorage.uni)
+                    this.showHelp = !!los.showHelp
+                }catch(e){
+                    console.warn(e)
+                }
+            }
             window.addEventListener('beforeunload', e=>{
                 localStorage.uni = JSON.stringify({
                     showHelp: this.showHelp,
