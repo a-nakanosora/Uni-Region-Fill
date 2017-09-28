@@ -1,0 +1,356 @@
+<html>
+<head>
+<title>Uni Region Fill</title>
+<script src="./lib/vue.min.js"></script>
+<style>
+.show {
+    display: initial;
+}
+.hide {
+    display: none;
+}
+
+body {
+    background: #f7f7f7;
+    user-select: none;
+    cursor: default;
+}
+
+.select-files {
+    margin-bottom: 7px;
+}
+.option {
+    margin: 0px 5px;
+}
+#color-things {
+    -webkit-user-select: none;
+    user-select: none;
+
+    cursor: context-menu;
+    position: fixed;
+    top: 0;
+    right: 0;
+    margin: 30px;
+    margin-right: 0px;
+    background-color: #f3f3f3;
+    padding: 13px;
+    border-radius: 20px;
+    z-index: 1100;
+}
+
+#canvases {
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+.canvas-transform {
+    position: absolute;
+    transform-origin: left top;
+    transform: matrix(1,0,0,1,5,140);
+}
+.canvas-container {
+    position: relative;
+    width: 0px;
+    height: 0px;
+    outline: 1px solid rgb(170, 187, 204);
+}
+
+.pastebox {
+	border: 2px dotted #abc;
+    border-radius: 4px;
+    color: #a6b0b5;
+    padding: 2px;
+    font-size: 75%;
+    cursor: text;
+}
+
+.colorview-wrapper {
+    border: 1px solid #888;
+    padding: 1;
+    background-color: #fff;
+    width: 20px;
+    height: 20px;
+}
+.front-color{
+    width: 100%;
+    height: 100%;
+    background-color: #000;
+}
+.back-color{
+    width: 100%;
+    height: 100%;
+    background-color: #fff;
+}
+
+.pin {
+    width: 40px;
+    text-align: center;
+    display: inline-block;
+    border: 2px solid #e4e4e4;
+    border-radius: 4px;
+    padding: 0px 5px;
+    font-size: 80%;
+    background: #ececec;
+    color: #a2a2a2;
+}
+.pinned {
+    background: #c3d0dc;
+    color: #f7f7f7;
+}
+
+.opts-a {
+    position: fixed;
+    z-index: 10;
+    left: 0;
+    top: 0;
+    background: rgba(204, 204, 204, 0.22);
+}
+.help {
+    pointer-events: none;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+}
+.helptable {
+    color: #909090;
+    font-size: 80%;
+    margin: 5px;
+}
+.helptable tr:nth-child(even) {
+    background-color: rgba(27, 27, 27, 0.02);
+}
+.helptable td {
+    border-radius: 5px;
+}
+
+.initializing {
+    margin:auto;
+    color: #909090;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
+}
+</style>
+</head>
+
+<body>
+
+<div class="initializing"><div>initializing...</div></div>
+
+<div id="vue-root" class="hide">
+    <div class="opts-a"
+         @mouseover="e=>this.openImagesVisible=true"
+         @mouseout="e=>this.openImagesVisible=false"
+         >
+
+
+        <span class="option">
+            draw mode:
+            <select v-model="drawmode">
+                <template v-for="mode in DrawMode">
+                <option>{{mode}}</option>
+                </template>
+            </select>
+        </span>
+        <span class="option">
+            use opacity:<input type="checkbox" id="checkbox" v-model="useOpacity">
+        </span>
+        <span class="option">
+            brush size on time:<input type="checkbox" id="checkbox" v-model="sizeOnTime">
+        </span>
+
+        <template v-if="ui_showuni">
+        <span class="option">
+            uni:<input type="checkbox" id="checkbox" v-model="useconststep">
+        </span>
+        </template>
+
+        <span class="option">
+            brush size: {{brushsize}}
+        </span>
+        <span class="option">
+            mass coef: <input type="number" step="1"
+                              v-model="drawmassCoef"
+                              style="width: 3em;">
+        </span>
+
+        <div class="status" ref="status"></div>
+
+
+        <div :class="['open-images', pinvis('openImages')]"
+             style="margin-bottom: 30px;">
+            <hr>
+            <div style="margin: 10px; float: left;">
+                line-drawing image<br>
+                <input class="select-files" type="file" name="file" @change="onFileChange" />
+                <br>
+                <span @paste="onPaste" @keydown="onPasteKeydown" class="pastebox"
+                      contenteditable="true">paste clipboard image (focus & Ctrl+V)</span>
+            </div>
+
+            <div style="margin: 10px; float: left;">
+                fill image<br>
+                <input class="select-files" type="file" name="file" @change="onFileChange_Fill" />
+                <br>
+                <span @paste="onPaste_Fill" @keydown="onPasteKeydown" class="pastebox"
+                      contenteditable="true">paste clipboard image (focus & Ctrl+V)</span>
+            </div>
+
+            <uni-pin target="openImagesPinned"
+                     style="margin: 10px; float: right;"></uni-pin>
+
+            <div style="clear:both;"></div>
+        </div>
+    </div>
+
+    <div id="color-things"
+         @mouseover="e=>this.colorPickerVisible=true"
+         @mouseout="e=>this.colorPickerVisible=false"
+         >
+        <div id="colorpicker-store"
+             :class="[pinvis('colorPicker')]"
+             >
+            <div id="colorpicker"></div>
+        </div>
+
+        <div style="
+            position: relative;
+            width: 49px;
+            height: 43px;
+            float: right;
+            ">
+            <div class="colorview-wrapper"
+                 style="position: absolute;
+                        top: 0;
+                        right: 20;
+                        z-index: 1;"><div class="front-color" :style="{'background-color': frontColorStyle}"></div></div>
+            <div class="colorview-wrapper"
+                 style="position: absolute;
+                        top: 15px;
+                        right: 5px;"><div class="back-color" :style="{'background-color': backColorStyle}"></div></div>
+        </div>
+        <div style="clear:both"></div>
+
+        <div style="text-align: right;"
+             :class="[pinvis('colorPicker')]"
+             >
+            <uni-pin target="colorPickerPinned"
+                     style="margin: 10px;"></uni-pin>
+        </div>
+    </div>
+
+    <hr>
+
+    <div id="canvases" :class="[{hide: canvasInitializing}]">
+    <div class="canvas-transform" ref="cnvtransform">
+        <div class="canvas-container"
+             :style="{width, height}">
+            <canvas ref="maincanvas"
+                    class="maincanvas"
+                    style="position: absolute;
+                           top: 0;
+                           left: 0;
+                           "
+                    :width="width"
+                    :height="height"
+                    ></canvas>
+            <canvas ref="maincanvas2"
+                    style="position: absolute;
+                           top: 0;
+                           left: 0;
+                           pointer-events: none;
+                           "
+                    :width="width"
+                    :height="height"
+                    ></canvas>
+            <canvas ref="origimgpreviewcanvas"
+                    :width="width"
+                    :height="height"
+                    style="mix-blend-mode: multiply;
+                           position: absolute;
+                           top: 0;
+                           left: 0;
+                           pointer-events: none;
+                           "
+                    ></canvas>
+            <canvas ref="uicanvas"
+                    :width="width"
+                    :height="height"
+                    style="position: absolute;
+                           top: 0;
+                           left: 0;
+                           pointer-events: none;
+                           "
+                    ></canvas>
+        </div>
+    </div>
+    </div>
+
+
+    <div :class="['help', showHelp?'show':'hide']">
+        <pre style="display:none" id="prehelp">
+        [mouse drag] : draw
+        [right click] | ctrl+[click] : pick a color
+        alt+[mouse drag] : change brush size
+        ctrl+[right click] : show context menu | to copy/save the fill image
+        ctrl+[Z] : undo
+        ctrl+[Y] : redo
+        [Q] : toggle `use opacity`
+        [X] : toggle front/back color
+        pressing [C] while draw : ignore regions
+        [1] / [2] : -/+ mass coef
+
+        space+[mouse drag] : pan canvas
+        [F2] / [F3] | [PageDown] / [PageUp] : zoom out/in canvas
+        [Delete] / [End] : rotate canvas
+        [Insert] : reset rotation
+        [F4] | [Home] : reset canvas transform
+        [F] : flip canvas
+
+        [H] : toggle help
+        </pre>
+
+        <script>
+        void function(){
+            const ph =  document.querySelector('#prehelp')
+            const s = ph.textContent
+            const table = '<table class="helptable">'
+              +s.trim().split(/\n+/g)
+                .map(a=>a.trim()
+                  .split(/\s*:\s*/)
+                  .map(b=>`<td>${b.replace(/\s*\|\s*/g, '<br>')}</td>`)
+                  .join("")
+                )
+                .map(c=>`<tr>${c}</tr>`)
+                .join("\n")
+              +'</table>'
+            ph.parentNode.insertAdjacentHTML('beforeEnd', table)
+        }()
+        </script>
+    </div>
+</div>
+
+
+
+<template id="uni-pin">
+<div :class="['pin', {pinned: this.$parent[target]}]"
+     @click="e=>this.$parent[target] = !this.$parent[target]">
+     pin
+</div>
+</template>
+<script>
+Vue.component('uni-pin', {
+    props: ['target'],
+    template: document.querySelector('#uni-pin')
+})
+</script>
+
+
+
+<script type="module" src="./main.js"></script>
+
+</body>
+</html>
