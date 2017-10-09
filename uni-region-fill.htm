@@ -54,6 +54,11 @@ body {
     height: 0px;
     outline: 1px solid rgb(170, 187, 204);
 }
+.canvas-container > canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
 
 .pastebox {
 	border: 2px dotted #abc;
@@ -155,35 +160,42 @@ body {
          >
 
 
-        <span class="option">
+        <label class="option">
             draw mode:
             <select v-model="drawmode">
                 <template v-for="mode in DrawMode">
                 <option>{{mode}}</option>
                 </template>
             </select>
-        </span>
-        <span class="option">
+        </label>
+        <label class="option">
             use opacity:<input type="checkbox" id="checkbox" v-model="useOpacity">
-        </span>
-        <span class="option">
+        </label>
+        <label class="option">
             brush size on time:<input type="checkbox" id="checkbox" v-model="sizeOnTime">
-        </span>
+        </label>
 
         <template v-if="ui_showuni">
-        <span class="option">
+        <label class="option">
             uni:<input type="checkbox" id="checkbox" v-model="useconststep">
-        </span>
+        </label>
         </template>
 
-        <span class="option">
+        <template v-if="ui_show_useLittleExtendedRegion">
+        <label class="option">
+            little extend:<input type="checkbox" id="checkbox" v-model="useLittleExtendedRegion">
+        </label>
+        </template>
+
+
+        <label class="option">
             brush size: {{brushsize}}
-        </span>
-        <span class="option">
+        </label>
+        <label class="option">
             mass coef: <input type="number" step="1"
                               v-model="drawmassCoef"
                               style="width: 3em;">
-        </span>
+        </label>
 
         <div class="status" ref="status"></div>
 
@@ -255,22 +267,14 @@ body {
     <div id="canvases" :class="[{hide: canvasInitializing}]">
     <div class="canvas-transform" ref="cnvtransform">
         <div class="canvas-container"
+             ref="cnvcontainer"
              :style="{width, height}">
             <canvas ref="maincanvas"
-                    class="maincanvas"
-                    style="position: absolute;
-                           top: 0;
-                           left: 0;
-                           "
                     :width="width"
                     :height="height"
                     ></canvas>
             <canvas ref="maincanvas2"
-                    style="position: absolute;
-                           top: 0;
-                           left: 0;
-                           pointer-events: none;
-                           "
+                    style="pointer-events: none;"
                     :width="width"
                     :height="height"
                     ></canvas>
@@ -278,20 +282,13 @@ body {
                     :width="width"
                     :height="height"
                     style="mix-blend-mode: multiply;
-                           position: absolute;
-                           top: 0;
-                           left: 0;
                            pointer-events: none;
                            "
                     ></canvas>
             <canvas ref="uicanvas"
                     :width="width"
                     :height="height"
-                    style="position: absolute;
-                           top: 0;
-                           left: 0;
-                           pointer-events: none;
-                           "
+                    style="pointer-events: none;"
                     ></canvas>
         </div>
     </div>

@@ -46,8 +46,11 @@ function draw(self, canvasTransform, _State){
         [DrawMode.experimental_A]:_=>f1,
         [DrawMode.experimental_A0]:_=>f1,
         [DrawMode.experimental_Crease]:_=>f1,
-        [DrawMode.Mochi]:_=>f2,
-        [DrawMode.Regular]:_=>f3,
+        [DrawMode.experimental_Mochi]:_=>f2,
+        // [DrawMode.Regular]:_=>f3,
+        [DrawMode.Regular]:_=>f3_test,
+        [DrawMode.experimental_Erode]:_=>f_erode,
+        // [DrawMode.Dilate]:_=>,
         default:_=>{throw new Error('invalid mode')},
     })
 
@@ -69,7 +72,9 @@ function draw(self, canvasTransform, _State){
         // if(throttle(2))
             return
 
-        const {x,y} = canvasTransform.mousePositionOnCanvas()
+        const {x,y} = canvasTransform.mousePositionOnCanvasRaw()
+        // console.log('Talmessite', window.e = e2)
+        // const [x,y] = [e2.clientX, e2.clientY] /// #debug
         if(self.useinterp && !isNaN(prevpos.x)){
             const u = prevpos.x
             const v = prevpos.y
@@ -80,13 +85,13 @@ function draw(self, canvasTransform, _State){
                 const n = self.brushsize <= self.interpLimitSize ? d : 10
                 const step = 1/n
                 for(const t of range(0.0, 1.0, step)) {
-                    const xx = (u+dx*t)<<0
-                    const yy = (v+dy*t)<<0
+                    const xx = (u+dx*t+.5)<<0
+                    const yy = (v+dy*t+.5)<<0
                     f(xx, yy, {self,w,h,checked,opt,mass,ctx,ctx2,DrawMode,drawmode}   )
                 }
             }
         }
-        f(x,y, {self,w,h,checked,opt,mass,ctx,ctx2,DrawMode,drawmode}   )
+        f(x+.5<<0, y+.5<<0, {self,w,h,checked,opt,mass,ctx,ctx2,DrawMode,drawmode}   )
 
         prevpos.x = x
         prevpos.y = y
@@ -101,7 +106,7 @@ function draw(self, canvasTransform, _State){
 
         const bound = Rect.getBound(path).margin(self.brushsize+10)
 
-        if([DrawMode.experimental_A, DrawMode.Mochi, DrawMode.Regular].includes(drawmode)){
+        if([DrawMode.experimental_A, DrawMode.experimental_Mochi, DrawMode.Regular].includes(drawmode)){
             ctx.globalAlpha = modeAOpacity
             ctx.drawImage(cnv2, bound.x,bound.y,bound.width,bound.height
                               , bound.x,bound.y,bound.width,bound.height)
@@ -314,8 +319,6 @@ function f3(x0,y0, {self,w,h,opt,mass,ctx,ctx2,DrawMode,drawmode}){
     const p = {x:x0,y:y0}
     const len = opt.len
 
-    let velocity = -1
-
     const vs = State.origValueMatrix
     const pi2 = Math.PI*2
 
@@ -336,7 +339,7 @@ function f3(x0,y0, {self,w,h,opt,mass,ctx,ctx2,DrawMode,drawmode}){
 
             let j
             let i
-            velocity = 255
+            let velocity = 255
             if(Math.abs(dx) >= Math.abs(dy)) {
                 const k = dy/dx
                 const jstep = dx >= 0 ? 1 : -1
@@ -356,7 +359,11 @@ function f3(x0,y0, {self,w,h,opt,mass,ctx,ctx2,DrawMode,drawmode}){
                     if(velocity<=0)
                         break
                 }
-                ps.push({x:j, y:i})
+                // ps.push({x:j, y:i})
+                // const j2 = j+jstep/2
+                const j2 = j+jstep/4
+                // ps.push({x:(j2+.5)<<0, y:y0+(k*(j2-x0)+.5)<<0})
+                ps.push({x:j2, y:y0+k*(j2-x0)})
             } else {
                 const k = dx/dy
                 const istep = dy >= 0 ? 1 : -1
@@ -376,7 +383,11 @@ function f3(x0,y0, {self,w,h,opt,mass,ctx,ctx2,DrawMode,drawmode}){
                     if(velocity<=0)
                         break
                 }
-                ps.push({x:j, y:i})
+                // ps.push({x:j, y:i})
+                // const i2 = i+istep/2
+                const i2 = i+istep/4
+                // ps.push({x:x0+(k*(i2-y0)+.5)<<0, y:(i2+.5)<<0})
+                ps.push({x:x0+k*(i2-y0), y:i2})
             }
         }
 
@@ -388,6 +399,143 @@ function f3(x0,y0, {self,w,h,opt,mass,ctx,ctx2,DrawMode,drawmode}){
         ctx2.closePath()
         ctx2.fill()
     }
+}
+
+// const N = 20
+const N = 40
+const [sinTable, cosTable] = (_do=>{
+    const sinTable = []
+    const cosTable = []
+    const pi2 = Math.PI*2
+    /*const tStep = 1/N
+    for(let t=0; t<pi2; t+=tStep) {*/
+    for(let i=0; i<N; i++) {
+        const t = i/N*pi2
+        const ct = Math.cos(t)
+        const st = Math.sin(t)
+        sinTable.push(st)
+        cosTable.push(ct)
+    }
+    return [sinTable, cosTable]
+})()
+
+function f3_test(x0,y0, {self,w,h,opt,mass,ctx,ctx2,DrawMode,drawmode}){
+    if(x0<0||x0>=w||y0<0||y0>=h)
+        return
+    const p = {x:x0,y:y0}
+    const len = opt.len
+
+    const vs = State.origValueMatrix
+    const pi2 = Math.PI*2
+
+    if(self.ignoreVelocity){
+        ctx2.fillStyle = `rgba(${opt.r},${opt.g},${opt.b},1.0)`
+        ctx2.beginPath()
+        ctx2.arc(x0,y0,len,0,pi2)
+        ctx2.fill()
+    } else {
+        const ps = []
+        /*for(let t=0; t<pi2; t+=tStep) {
+            const ct = Math.cos(t)
+            const st = Math.sin(t)*/
+        for(let ti=0; ti<N; ti++) {
+            const ct = cosTable[ti]
+            const st = sinTable[ti]
+            let j
+            let i
+            let velocity = 255
+            let s
+            for(s=0; s<len; s++) {
+                i = (y0+s*st+.5)<<0
+                j = (x0+s*ct+.5)<<0
+
+                if( j<0 || j>=w || i<0 || i>=h)
+                    break
+
+                const c = vs[i][j]
+                if(c !== 255)
+                    velocity -= (255-c)*mass
+
+                if(velocity<=0)
+                    break
+            }
+            // ps.push({x:j, y:i})
+            // const [i2, j2] = [i+st/2, j+ct/2]
+            // const [i2, j2] = [y0+s*st+st/2, x0+s*ct+ct/2]
+            // const [i2, j2] = [i+st/4, j+ct/4]
+            // ps.push({x:(j2+.5)<<0, y:(i2+.5)<<0})
+            // ps.push({x:j2, y:i2})
+
+            /// #test - offset `.5`
+            if(self.useLittleExtendedRegion) {
+                const [i2, j2] = [y0+s*st+st/2, x0+s*ct+ct/2]
+                ps.push({x:j2+.5, y:i2+.5})
+            } else {
+                ps.push({x:j+.5, y:i+.5})
+            }
+        }
+
+        ctx2.fillStyle = `rgba(${opt.r},${opt.g},${opt.b},1.0)`
+        ctx2.beginPath()
+        ctx2.moveTo(ps[0].x, ps[0].y)
+        for(const p of ps.slice(1))
+            ctx2.lineTo(p.x, p.y)
+        ctx2.closePath()
+        ctx2.fill()
+    }
+}
+
+function f_erode(x0,y0, {self,w,h,opt,mass,ctx,ctx2,DrawMode,drawmode}){
+    if(x0<0||x0>=w||y0<0||y0>=h)
+        return
+
+    if(!f_erode.throttle)
+        f_erode.throttle = ThrottleTime.create()
+    if(f_erode.throttle(30))
+        return
+
+    const len = opt.len
+
+    const bound = Rect.round(new Rect(x0-len, y0-len, len*2, len*2))
+    bound.trimWith(new Rect(0,0,w,h))
+
+
+    const imd = ctx.getImageData(bound.x, bound.y, bound.width, bound.height)
+    const view = imd.data
+    const viewGray = new Uint8ClampedArray(bound.width*bound.height)
+    const viewNext = new Uint8ClampedArray(view.buffer.slice(0))
+    // const viewNext = new Uint8ClampedArray(view.length)
+    assert(viewGray.length*4 === view.length)
+
+    const bw = bound.width
+    for(let y=0; y<bound.height; y++)
+        for(let x=0; x<bw; x++) {
+            const i = y*bw+x
+            const i2 = i*4
+            viewGray[i] = Math.round(0.2989*view[i2] + 0.5870*view[i2+1] + 0.1140*view[i2+2])
+        }
+
+    /*for(let y=0; y<bound.height; y++)
+        for(let x=0; x<bw; x++) {*/
+    for(let y=1; y<bound.height-1; y++) /// +1/-1 -- #temp
+        for(let x=1; x<bw-1; x++) {
+            let min = 255
+            const idx0 = (y*bw+x)*4
+            for(let i=y-1; i<=y+1; i++)
+                for(let j=x-1; j<=x+1; j++) {
+                    const idx = i*bw+j
+                    if(viewGray[idx] < min) {
+                        min = viewGray[idx]
+                        const idx2 = idx*4
+                        viewNext[idx0] = view[idx2]
+                        viewNext[idx0+1] = view[idx2+1]
+                        viewNext[idx0+2] = view[idx2+2]
+                        viewNext[idx0+3] = view[idx2+3]
+                    }
+                }
+        }
+
+    ctx.putImageData(new ImageData(viewNext, bound.width, bound.height), bound.x, bound.y)
 }
 
 function lineOrdered(ctx, a, b, opt={r:0,g:0,b:0,len:100}){

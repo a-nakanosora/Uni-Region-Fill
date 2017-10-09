@@ -35,10 +35,11 @@ function main(){
 
     const DrawMode = tortologyDict(`
         Regular
-        Mochi
+        experimental_Mochi
         experimental_A
         experimental_A0
         experimental_Crease
+        experimental_Erode
         `)
 
     const app = new Vue({
@@ -59,6 +60,7 @@ function main(){
             useinterp: true,
             interpLimitSize: 10,
             // interpLimitSize: 300,
+            useLittleExtendedRegion: true,
 
             ///
             readyToPanCanvas: false,
@@ -87,6 +89,10 @@ function main(){
                 return [DrawMode.experimental_A
                        ,DrawMode.experimental_A0
                        ,DrawMode.experimental_Crease].includes(this.drawmode)
+            },
+            ui_show_useLittleExtendedRegion(){
+                const DrawMode = this.DrawMode
+                return [DrawMode.Regular].includes(this.drawmode)
             },
         },
 
@@ -257,15 +263,18 @@ function main(){
             },
             onMousedown(e){
                 const cnv = this.$refs.maincanvas
+                const container = this.$refs.cnvcontainer
+
                 // if(e.target === cnv) {
-                if(e.target === cnv || e.target === document.body) {
+                if([cnv,container,document.body].includes(e.target)) {
                     e.preventDefault()
                     document.activeElement.blur()
 
-                    void function(){
+                    void (()=>{
                         /// prevent context menu on right click
                         if(e.ctrlKey || e.altKey)
                             return
+
                         const f = e=>e.preventDefault()
                         const up = e=>{
                             e.preventDefault()
@@ -277,7 +286,7 @@ function main(){
                         }
                         document.addEventListener('contextmenu', f)
                         document.addEventListener('mouseup', up)
-                    }()
+                    })()
 
                     if(this.readyToPanCanvas) {
                         State.canvasTransformOps.startPan()
@@ -400,7 +409,7 @@ function main(){
             ///
             const ct = new CanvasTransform()
             State.canvasTransform = ct
-            ct.activate('canvas-transform', 'maincanvas')
+            ct.activate('canvas-transform', 'canvas-container')
             ct.resetTransform()
             ct.update()
             State.canvasTransformOps = new CanvasTransformOps(ct)
