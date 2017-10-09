@@ -1,5 +1,5 @@
 # Uni-Region-Fill
-for line drawing image - tiny paint app with simple region search algorithm
+for line drawing image - tiny paint HTML5 app with simple region detection algorithm
 
 [GitHub](https://github.com/a-nakanosora/Uni-Region-Fill)
 
